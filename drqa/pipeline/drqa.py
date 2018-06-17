@@ -177,16 +177,16 @@ class DrQA(object):
         return loader
 
     def process(self, query, candidates=None, top_n=1, n_docs=5,
-                return_context=False):
+                return_context=False, include_candidates=False):
         """Run a single query."""
         predictions = self.process_batch(
             [query], [candidates] if candidates else None,
-            top_n, n_docs, return_context
+            top_n, n_docs, return_context, include_candidates
         )
         return predictions[0]
 
     def process_batch(self, queries, candidates=None, top_n=1, n_docs=5,
-                      return_context=False):
+                      return_context=False, include_candidates=False):
         """Run a batch of queries (more efficient)."""
         t0 = time.time()
         logger.info('Processing %d queries...' % len(queries))
@@ -194,7 +194,13 @@ class DrQA(object):
 
         # Rank documents for queries.
         if len(queries) == 1:
-            ranked = [self.ranker.closest_docs(queries[0], k=n_docs)]
+            query_string = queries[0]
+            if include_candidates:
+                if(len(candidates)):
+                    for option in candidates[0]:
+                        query_string = query_string + " " + option
+            
+            ranked = [self.ranker.closest_docs(query_string, k=n_docs)]
         else:
             ranked = self.ranker.batch_closest_docs(
                 queries, k=n_docs, num_workers=self.num_workers
